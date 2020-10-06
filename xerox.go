@@ -52,7 +52,8 @@ func handleError(err error) {
 }
 
 func main() {
-	log.Printf("Warming up Xerox machine")
+	log.Printf("Warming up Xerox machine...")
+
 	context := context.Background()
 	githubClient := gitclient.Client()
 	spreadsheetService := sheetsclient.Client()
@@ -69,7 +70,7 @@ func main() {
 	}
 	commits, _, er := githubClient.Repositories.ListCommits(context, config.Owner, config.Repository, &options)
 	handleError(er)
-	values := make([][]interface{}, 10)
+	values := make([][]interface{}, 100)
 
 	for index, commit := range commits {
 		values[index] = []interface{}{
