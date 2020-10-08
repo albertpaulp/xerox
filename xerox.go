@@ -72,12 +72,12 @@ func main() {
 	handleError(er)
 	values := make([][]interface{}, 100)
 
-	for index, commit := range commits {
-		values[index] = []interface{}{
+	for i, j := len(commits), 0; i >= 1; i, j = i-1, j+1 {
+		values[i-1] = []interface{}{
 			"",
 			"",
-			commit.Commit.Author.Date.Format("02.01.2006"),
-			trimCommitMessage(commit.Commit.GetMessage()),
+			commits[j].Commit.Author.Date.Format("02.01.2006"),
+			trimCommitMessage(commits[j].Commit.GetMessage()),
 		}
 	}
 
