@@ -6,15 +6,14 @@ import (
 	"log"
 	"time"
 
-	"github.com/albertpaulp/xerox/sheetsclient"
-
 	"github.com/albertpaulp/xerox/gitclient"
-
-	"gopkg.in/yaml.v2"
-
+	"github.com/albertpaulp/xerox/sheetsclient"
 	"github.com/google/go-github/github"
 	"google.golang.org/api/sheets/v4"
+	"gopkg.in/yaml.v2"
 )
+
+const buildState = "success"
 
 // YamlConfig Configuration options from config.yml
 type YamlConfig struct {
@@ -22,6 +21,8 @@ type YamlConfig struct {
 	Repository    string `yaml:"repository"`
 	Branch        string `yaml:"branch"`
 	SpreadsheetID string `yaml:"spreadsheetID"`
+	ColumnRange   string `yaml:"columnRange"`
+	GoTimeFormat  string `yaml:"goTimeFormat"`
 }
 
 func loadConfig() *YamlConfig {
@@ -51,8 +52,23 @@ func handleError(err error) {
 	}
 }
 
+func getCommitStatus(ctx context.Context, githubClient *github.Client, ref string) int {
+	config := loadConfig()
+	options := github.ListOptions{
+		Page:    1,
+		PerPage: 1,
+	}
+	statuses, _, err := githubClient.Repositories.ListStatuses(ctx, config.Owner, config.Repository, ref, &options)
+	handleError(err)
+	state := 0
+	if statuses[0].GetState() != buildState {
+		state = 1
+	}
+	return state
+}
+
 func main() {
-	log.Printf("Warming up Xerox machine...")
+	log.Printf("Warming Xerox machine...")
 
 	context := context.Background()
 	githubClient := gitclient.Client()
@@ -76,8 +92,9 @@ func main() {
 		values[i-1] = []interface{}{
 			"",
 			"",
-			commits[j].Commit.Author.Date.Format("02.01.2006"),
+			commits[j].Commit.Author.Date.Format(config.GoTimeFormat),
 			trimCommitMessage(commits[j].Commit.GetMessage()),
+			getCommitStatus(context, githubClient, commits[j].GetSHA()),
 		}
 	}
 
@@ -89,7 +106,7 @@ func main() {
 	_, err := spreadsheetService.
 		Spreadsheets.
 		Values.
-		Append(config.SpreadsheetID, "C:F", rb).
+		Append(config.SpreadsheetID, config.ColumnRange, rb).
 		ValueInputOption("USER_ENTERED").
 		InsertDataOption("INSERT_ROWS").
 		Do()
