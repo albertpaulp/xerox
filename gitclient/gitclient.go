@@ -20,8 +20,7 @@ func getAccessToken() string {
 }
 
 // Client returns pointer to github.Client
-func Client() *github.Client {
-	ctx := context.Background()
+func Client(ctx context.Context) *github.Client {
 	ts := oauth2.StaticTokenSource(
 		&oauth2.Token{AccessToken: getAccessToken()},
 	)
