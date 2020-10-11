@@ -15,14 +15,18 @@ import (
 
 const buildState = "success"
 
+var ctx = context.Background()
+var config = loadConfig()
+
 // YamlConfig Configuration options from config.yml
 type YamlConfig struct {
-	Owner         string `yaml:"owner"`
-	Repository    string `yaml:"repository"`
-	Branch        string `yaml:"branch"`
-	SpreadsheetID string `yaml:"spreadsheetID"`
-	ColumnRange   string `yaml:"columnRange"`
-	GoTimeFormat  string `yaml:"goTimeFormat"`
+	Owner            string `yaml:"owner"`
+	Repository       string `yaml:"repository"`
+	Branch           string `yaml:"branch"`
+	SpreadsheetID    string `yaml:"spreadsheetID"`
+	ColumnRange      string `yaml:"columnRange"`
+	GoTimeFormat     string `yaml:"goTimeFormat"`
+	CommitTrimLength int    `yaml:"commitTrimLength"`
 }
 
 func loadConfig() *YamlConfig {
@@ -39,8 +43,8 @@ func loadConfig() *YamlConfig {
 }
 
 func trimCommitMessage(message string) string {
-	if len(message) > 100 {
-		message = message[0:100]
+	if len(message) > config.CommitTrimLength {
+		message = message[0:config.CommitTrimLength]
 	}
 	return message
 }
@@ -52,7 +56,7 @@ func handleError(err error) {
 	}
 }
 
-func getCommitStatus(ctx context.Context, githubClient *github.Client, ref string) int {
+func getCommitStatus(githubClient *github.Client, ref string) int {
 	config := loadConfig()
 	options := github.ListOptions{
 		Page:    1,
@@ -67,46 +71,54 @@ func getCommitStatus(ctx context.Context, githubClient *github.Client, ref strin
 	return state
 }
 
-func main() {
-	log.Printf("Warming Xerox machine...")
-
-	context := context.Background()
-	githubClient := gitclient.Client()
-	spreadsheetService := sheetsclient.Client()
-	config := loadConfig()
-
-	yesterday := time.Now().AddDate(0, 0, -1)
-	yesterdayBOD := time.Date(yesterday.Year(), yesterday.Month(), yesterday.Day(), 0, 0, 0, 0, time.Local)
-	yesterdayEOD := time.Date(yesterday.Year(), yesterday.Month(), yesterday.Day(), 23, 59, 0, 0, time.Local)
+func getCommits(githubClient *github.Client, fromDate time.Time) []*github.RepositoryCommit {
+	fromDateBOD := time.Date(fromDate.Year(), fromDate.Month(), fromDate.Day(), 0, 0, 0, 0, time.Local)
+	fromDateEOD := time.Date(fromDate.Year(), fromDate.Month(), fromDate.Day(), 23, 59, 0, 0, time.Local)
 
 	options := github.CommitsListOptions{
 		SHA:   config.Branch,
-		Since: yesterdayBOD,
-		Until: yesterdayEOD,
+		Since: fromDateBOD,
+		Until: fromDateEOD,
 	}
-	commits, _, er := githubClient.Repositories.ListCommits(context, config.Owner, config.Repository, &options)
+	commits, _, er := githubClient.Repositories.ListCommits(ctx, config.Owner, config.Repository, &options)
 	handleError(er)
-	values := make([][]interface{}, 100)
+	return commits
+}
+
+func formatCommits(githubClient *github.Client, commits []*github.RepositoryCommit, dateToPull time.Time) [][]interface{} {
+	orderedCommits := make([][]interface{}, 100)
 
 	for i, j := len(commits), 0; i >= 1; i, j = i-1, j+1 {
-		values[i-1] = []interface{}{
+		orderedCommits[i-1] = []interface{}{
 			"",
 			"",
-			commits[j].Commit.Author.Date.Format(config.GoTimeFormat),
+			dateToPull.Format(config.GoTimeFormat),
 			trimCommitMessage(commits[j].Commit.GetMessage()),
-			getCommitStatus(context, githubClient, commits[j].GetSHA()),
+			getCommitStatus(githubClient, commits[j].GetSHA()),
 		}
 	}
+	return orderedCommits
+}
 
-	rb := &sheets.ValueRange{
+func main() {
+	log.Printf("Warming Xerox machine...")
+
+	githubClient := gitclient.Client()
+	spreadsheetService := sheetsclient.Client()
+	dateToPull := time.Now().AddDate(0, 0, -3)
+
+	commits := getCommits(githubClient, dateToPull)
+	formattedCommits := formatCommits(githubClient, commits, dateToPull)
+
+	valueRange := &sheets.ValueRange{
 		MajorDimension: "ROWS",
-		Values:         values,
+		Values:         formattedCommits,
 	}
 
 	_, err := spreadsheetService.
 		Spreadsheets.
 		Values.
-		Append(config.SpreadsheetID, config.ColumnRange, rb).
+		Append(config.SpreadsheetID, config.ColumnRange, valueRange).
 		ValueInputOption("USER_ENTERED").
 		InsertDataOption("INSERT_ROWS").
 		Do()

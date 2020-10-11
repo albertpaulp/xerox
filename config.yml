@@ -3,4 +3,5 @@ repository: application
 branch: master
 columnRange: "C:F"
 goTimeFormat: "02.01.2006"
+commitTrimLength: 100
 spreadsheetID: 1--KPRhB9JgrGKkEYHyW9QOqUm8yPdvj5y94Zshdm6a8
