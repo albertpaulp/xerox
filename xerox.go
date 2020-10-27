@@ -105,7 +105,7 @@ func main() {
 
 	githubClient := gitclient.Client(ctx)
 	spreadsheetService := sheetsclient.Client()
-	dateToPull := time.Now().AddDate(0, 0, -3)
+	dateToPull := time.Now().AddDate(0, 0, -1)
 
 	commits := getCommits(githubClient, dateToPull)
 	formattedCommits := formatCommits(githubClient, commits, dateToPull)
