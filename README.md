@@ -7,5 +7,5 @@ Copy Github Commits to Google Spreadsheet.
 - Download `credentials.json` for above project and keep it in project directory.
 - Create AccessToken in Github, export it as `GITHUB_ACCESS_TOKEN`
 - Update config.yml for configuration regarding repository to copy commits.
-- Run binary `./xerox` (Built for OSX)
+- Use `xerox_amd64` for *nix and `darwin` for MacOS.
 - Run `go build` to rebuild binary.
