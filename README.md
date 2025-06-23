@@ -1,4 +1,4 @@
-## DEPRECATED - I don't know if this works anylonger.
+## DEPRECATED - I don't know if this works any longer.
 # Xerox
 
 Copy Github Commits to Google Spreadsheet.
