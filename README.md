@@ -11,4 +11,3 @@ Copy Github Commits to Google Spreadsheet.
 - Use `xerox_amd64` for *nix and `darwin` for MacOS.
 - Run `go build` to rebuild binary.
 
-.
