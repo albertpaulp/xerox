@@ -10,3 +10,5 @@ Copy Github Commits to Google Spreadsheet.
 - Update config.yml for configuration regarding repository to copy commits.
 - Use `xerox_amd64` for *nix and `darwin` for MacOS.
 - Run `go build` to rebuild binary.
+
+.
